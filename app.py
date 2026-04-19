@@ -204,7 +204,7 @@ elif page == 'View Points Table':
         creditor = creditors.loc[j]
         give = min(-debtor['Balance'], creditor['Balance'])
         if give > 0:
-            settlements.append(f"{debtor['Name']} transfers {creditor['Name']}: {give:.0f}")
+            settlements.append(f"{debtor['Name']} pays {creditor['Name']}: {give:.0f}")
             df_bal.loc[df_bal['Name'] == debtor['Name'], 'Balance'] += give
             df_bal.loc[df_bal['Name'] == creditor['Name'], 'Balance'] -= give
             # Update local copies for loop
