@@ -188,7 +188,7 @@ elif page == 'View Points Table':
     st.dataframe(styled, use_container_width=True)
 
     # Settlement calculation
-    st.markdown('---')
+    st.markdown('----')
     st.markdown('#### Suggested Settlements')
     # Prepare balances
     df_bal = df[['Name', 'Balance']].copy()
