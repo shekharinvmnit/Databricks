@@ -16,8 +16,7 @@ def load_teams():
     if names and names[0].strip().lower() in ['name', 'team', 'team name']:
         names = names[1:]
     teams = [n.strip() for n in names if n.strip()]
-    # Remove duplicate team names while preserving order
-    return list(dict.fromkeys(teams))
+    return teams
 
 # Load the full DataFrame
 @st.cache_data
@@ -57,8 +56,8 @@ if page == 'Update Points':
     for idx, team in enumerate(teams):
         with cols[idx % 2]:
             row = st.columns([2, 2])
-            participation[team] = row[0].checkbox(team, value=True, key=f'part_{idx}_{team}')
-            rank_selection[team] = row[1].selectbox('Rank', rank_options, key=f'rank_{idx}_{team}')
+            participation[team] = row[0].checkbox(team, value=True, key=f'part_{team}')
+            rank_selection[team] = row[1].selectbox('Rank', rank_options, key=f'rank_{team}')
 
     if st.button('Submit'):
         # Collect participants and their ranks
@@ -93,15 +92,6 @@ if page == 'Update Points':
             new_points[team] = pts
         # Load and update DataFrame
         df = load_df()
-        existing_teams = df['Name'].astype(str).str.strip().tolist()
-        missing_selected = [team for team in participants if team not in existing_teams]
-        if missing_selected:
-            st.error(
-                'The following selected teams are not present in the points table: '
-                + ', '.join(missing_selected)
-                + '. Please add them to the table first or correct the team list.'
-            )
-            st.stop()
         # Add new date column if needed
         col_name = date_str
         if col_name in df.columns:
@@ -109,13 +99,18 @@ if page == 'Update Points':
             while f"{date_str} ({suffix})" in df.columns:
                 suffix += 1
             col_name = f"{date_str} ({suffix})"
-        if col_name not in df.columns:
-            df[col_name] = 0
-        # Set points only for selected participants
+        df[col_name] = 0
+        # Ensure all teams are present in the DataFrame
+        for team in teams:
+            if team not in df['Name'].values:
+                df = pd.concat([df, pd.DataFrame({'Name': [team]})], ignore_index=True)
+        # Set points for each team
         for idx, row in df.iterrows():
-            team = str(row['Name']).strip()
-            if team in participants:
+            team = row['Name']
+            if team in new_points:
                 df.at[idx, col_name] = new_points[team]
+            else:
+                df.at[idx, col_name] = 0
         save_df(df)
         st.success(f'Points updated for {col_name}!')
         load_df.clear()
@@ -186,7 +181,7 @@ elif page == 'View Points Table':
     # Remove rows where Name is empty or None
     if 'Name' in df.columns:
         df = df[df['Name'].notnull() & (df['Name'].astype(str).str.strip() != '')]
-    styled = df.style.map(highlight_balance, subset=['Balance'])
+    styled = df.style.applymap(highlight_balance, subset=['Balance'])
     st.dataframe(styled, use_container_width=True)
 
     # Settlement calculation
