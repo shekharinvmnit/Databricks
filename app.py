@@ -100,13 +100,18 @@ if page == 'Update Points':
                 suffix += 1
             col_name = f"{date_str} ({suffix})"
         df[col_name] = 0
-        # Ensure all teams are present in the DataFrame
+        # Normalize existing team names and ensure all teams are present in the DataFrame
+        if 'Name' in df.columns:
+            df['Name'] = df['Name'].astype(str).str.strip()
+        existing_names_lower = {name.lower() for name in df['Name'].astype(str).tolist() if name.strip()}
         for team in teams:
-            if team not in df['Name'].values:
-                df = pd.concat([df, pd.DataFrame({'Name': [team]})], ignore_index=True)
+            normalized_team = team.strip()
+            if normalized_team and normalized_team.lower() not in existing_names_lower:
+                df = pd.concat([df, pd.DataFrame({'Name': [normalized_team]})], ignore_index=True)
+                existing_names_lower.add(normalized_team.lower())
         # Set points for each team
         for idx, row in df.iterrows():
-            team = row['Name']
+            team = str(row['Name']).strip()
             if team in new_points:
                 df.at[idx, col_name] = new_points[team]
             else:
