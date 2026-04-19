@@ -4,6 +4,11 @@ import pandas as pd
 import os
 from datetime import datetime
 
+# Show toast if set
+if 'show_toast' in st.session_state and st.session_state['show_toast']:
+    st.toast(f'Points are updated for {st.session_state["toast_date"]}.', icon='✅')
+    st.session_state['show_toast'] = False
+
 # Path to the Excel file
 EXCEL_PATH = os.path.join(os.path.dirname(__file__), 'TeamRankApp.xlsx')
 
@@ -71,6 +76,10 @@ if page == 'Update Points':
             r = rank_selection[team]
             if r in rank_groups:
                 rank_groups[r].append(team)
+        # Check if at least one rank is assigned
+        if not rank_groups['1st'] and not rank_groups['2nd'] and not rank_groups['3rd']:
+            st.error('Please select 1st, 2nd, 3rd rank.')
+            st.stop()
         # Check for duplicate ranks (optional: allow multiple per rank)
         # Calculate points
         num_participants = len(participants)
@@ -117,7 +126,8 @@ if page == 'Update Points':
             else:
                 df.at[idx, col_name] = 0
         save_df(df)
-        st.success(f'Points updated for {col_name}!')
+        st.session_state['show_toast'] = True
+        st.session_state['toast_date'] = col_name
         load_df.clear()
         load_teams.clear()
         st.rerun()
