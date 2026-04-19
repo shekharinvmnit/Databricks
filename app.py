@@ -36,7 +36,14 @@ teams = load_teams()
 
 # Sidebar navigation
 st.sidebar.title('Navigation')
-page = st.sidebar.radio('Go to', ['Update Points', 'View Points Table', 'Delete Date Range'])
+admin_password = st.sidebar.text_input('Admin Password (optional)', type='password')
+if admin_password == 'TeamRankAdmin!2026':
+    pages = ['Update Points', 'View Points Table', 'Delete Date Range']
+else:
+    pages = ['View Points Table']
+    if admin_password:
+        st.sidebar.error('Incorrect password.')
+page = st.sidebar.radio('Go to', pages)
 
 st.title('Team Ranking Web App')
 
