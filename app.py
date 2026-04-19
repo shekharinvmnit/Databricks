@@ -264,6 +264,10 @@ elif page == 'Delete Date Range':
         if not to_delete:
             st.info('No columns found in the selected date range.')
         else:
+            # Create backup before deleting
+            backup_path = EXCEL_PATH.replace('.xlsx', f'_backup_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx')
+            df.to_excel(backup_path, index=False, engine='openpyxl')
+            st.info(f'Backup created: {os.path.basename(backup_path)}')
             df = df.drop(columns=to_delete)
             save_df(df)
             load_df.clear()
