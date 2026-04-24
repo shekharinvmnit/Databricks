@@ -196,9 +196,13 @@ elif page == 'View Points Table':
         else:
             new_cols.append(c)
     df.columns = new_cols
-    # Recalculate Balance as the sum of all date columns
+    # Sort date columns by date descending (latest first)
     date_cols = [c for c in df.columns if c not in ['Name', 'Balance']]
+    date_cols_sorted = sorted(date_cols, key=lambda x: datetime.strptime(x.split(' ')[0], '%Y-%m-%d'), reverse=True)
+    # Recalculate Balance as the sum of all date columns
     df['Balance'] = df[date_cols].apply(lambda row: sum(pd.to_numeric(row, errors='coerce').fillna(0)), axis=1)
+    # Reorder columns: Name, Balance, sorted dates
+    df = df[['Name', 'Balance'] + date_cols_sorted]
     # Format all columns except 'Name' as int or 1 decimal
     for col in df.columns:
         if col != 'Name':
