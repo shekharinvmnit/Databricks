@@ -4,6 +4,8 @@ import pandas as pd
 import os
 from datetime import datetime
 import subprocess
+import requests
+import base64
 
 # Show toast if set
 if 'show_toast' in st.session_state and st.session_state['show_toast']:
@@ -134,21 +136,38 @@ if page == 'Update Points':
             else:
                 df.at[idx, col_name] = 0
         save_df(df)
-        # Commit and push to GitHub
-        try:
-            subprocess.run(['git', 'add', 'TeamRankApp.xlsx'], cwd=os.path.dirname(__file__), check=True, capture_output=True)
-            commit_msg = f'Update points for {col_name}'
-            result = subprocess.run(['git', 'commit', '-m', commit_msg], cwd=os.path.dirname(__file__), capture_output=True, text=True)
-            if result.returncode == 0:
-                push_result = subprocess.run(['git', 'push'], cwd=os.path.dirname(__file__), capture_output=True, text=True)
-                if push_result.returncode == 0:
+        # Upload to GitHub using API
+        token = os.environ.get('GITHUB_TOKEN')
+        if not token:
+            st.error('GITHUB_TOKEN environment variable not set. Cannot push to GitHub.')
+        else:
+            repo = 'shekharinvmnit/Databricks'
+            file_path = 'TeamRankApp.xlsx'
+            url = f'https://api.github.com/repos/{repo}/contents/{file_path}'
+            headers = {'Authorization': f'token {token}'}
+            try:
+                with open(EXCEL_PATH, 'rb') as f:
+                    content = base64.b64encode(f.read()).decode('utf-8')
+                # Get current sha if file exists
+                response = requests.get(url, headers=headers)
+                sha = None
+                if response.status_code == 200:
+                    sha = response.json()['sha']
+                # Update or create
+                data = {
+                    'message': f'Update points for {col_name}',
+                    'content': content,
+                    'branch': 'main'
+                }
+                if sha:
+                    data['sha'] = sha
+                response = requests.put(url, headers=headers, json=data)
+                if response.status_code in [200, 201]:
                     st.success('Excel file updated and pushed to GitHub successfully!')
                 else:
-                    st.error(f'Failed to push to GitHub: {push_result.stderr}')
-            else:
-                st.info('No changes to commit.')
-        except subprocess.CalledProcessError as e:
-            st.error(f'Failed to commit changes: {e}')
+                    st.error(f'Failed to upload to GitHub: {response.json().get("message", response.text)}')
+            except Exception as e:
+                st.error(f'Error uploading to GitHub: {str(e)}')
         st.session_state['show_toast'] = True
         st.session_state['toast_date'] = col_name
         load_df.clear()
