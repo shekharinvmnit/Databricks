@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime
+import subprocess
 
 # Show toast if set
 if 'show_toast' in st.session_state and st.session_state['show_toast']:
@@ -133,6 +134,21 @@ if page == 'Update Points':
             else:
                 df.at[idx, col_name] = 0
         save_df(df)
+        # Commit and push to GitHub
+        try:
+            subprocess.run(['git', 'add', 'TeamRankApp.xlsx'], cwd=os.path.dirname(__file__), check=True, capture_output=True)
+            commit_msg = f'Update points for {col_name}'
+            result = subprocess.run(['git', 'commit', '-m', commit_msg], cwd=os.path.dirname(__file__), capture_output=True, text=True)
+            if result.returncode == 0:
+                push_result = subprocess.run(['git', 'push'], cwd=os.path.dirname(__file__), capture_output=True, text=True)
+                if push_result.returncode == 0:
+                    st.success('Excel file updated and pushed to GitHub successfully!')
+                else:
+                    st.error(f'Failed to push to GitHub: {push_result.stderr}')
+            else:
+                st.info('No changes to commit.')
+        except subprocess.CalledProcessError as e:
+            st.error(f'Failed to commit changes: {e}')
         st.session_state['show_toast'] = True
         st.session_state['toast_date'] = col_name
         load_df.clear()
